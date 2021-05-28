@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<!-- made by 尾鰭 -->
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Statistic Chart</title>
+
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <style>
+        body {
+            background-color: honeydew;
+        }
+
+        #tabs {
+
+            width: 1100px;
+            height: auto;
+            margin: 15px auto;
+            text-align: center;
+            border-radius: 8px;
+
+        }
+
+        input {
+            margin: 0.5rem;
+            border-radius: 4px;
+
+        }
+
+
+        #parentX {
+            margin: 3px auto;
+            padding: 10px;
+            width: 700px;
+            height: 700px;
+            text-align: center;
+            font-size: 18px;
+            border-radius: 20px;
+
+            background-color: rgb(195, 240, 195);
+            box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+            -webkit-box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+            -moz-box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+            -o-box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+        }
+
+        .mycanvas {
+            background-color: rgb(173, 208, 224);
+            border-radius: 30px;
+
+
+            box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+            -webkit-box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+            -moz-box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+            -o-box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+        }
+
+        #mycanvas1 {
+            margin: auto;
+        }
+    </style>
+
+    <script>
+        var tempData = [];
+        var db;
+        var dbname;
+        var request;
+        window.onload = function () {
+
+            dbname = "myIndexedDB_01";
+
+            if (!indexedDB) {
+                alert("抱歉, 您的瀏覽器不支援Indexed DB");
+            }
+            request = indexedDB.open(dbname, 1);
+
+            request.onerror = function (event) {
+                alert("發生錯誤");
+            }
+            request.onsuccess = function (event) {
+                db = request.result;
+                //alert("資料庫開啟成功:" + db);
+                doingData();
+            }
+            request.onupgradeneeded = function (event) {
+                var db = event.target.result;
+                var objectStore = db.createObjectStore("persons", {
+                    keyPath: "id",
+                    //autoIncrement: true
+                    //使用key會喵喵 所以改成keyPath
+                });
+
+                for (var i in personsData) {
+                    objectStore.add(personsData[i]);
+                }
+            }
+
+            function padding(num, length) { //輸出時佔幾位數
+                return (Array(length).join("0") + num).slice(-length);
+            }
+
+            const personsData = [ //單位: 萬元
+                {
+                    id: 1,
+                    name: "January",
+                    department: "業務A組",
+                    performance: 300.0
+                },
+                {
+                    id: 2,
+                    name: "February",
+                    department: "業務A組",
+                    performance: 350.0
+                },
+                {
+                    id: 3,
+                    name: "March",
+                    department: "業務A組",
+                    performance: 320.0
+                },
+                {
+                    id: 4,
+                    name: "April",
+                    department: "業務A組",
+                    performance: 150.0
+                },
+                {
+                    id: 5,
+                    name: "May",
+                    department: "業務B組",
+                    performance: 130.0
+                },
+                {
+                    id: 6,
+                    name: "June",
+                    department: "業務B組",
+                    performance: 230.0
+                },
+                {
+                    id: 7,
+                    name: "July",
+                    department: "業務B組",
+                    performance: 230.0
+                },
+                {
+                    id: 8,
+                    name: "August",
+                    department: "業務B組",
+                    performance: 200.0
+                },
+                {
+                    id: 9,
+                    name: "September",
+                    department: "業務C組",
+                    performance: 270.0
+                },
+                {
+                    id: 10,
+                    name: "October",
+                    department: "業務C組",
+                    performance: 380.0
+                },
+                {
+                    id: 11,
+                    name: "November",
+                    department: "業務C組",
+                    performance: 420.0
+                },
+                {
+                    id: 12,
+                    name: "December",
+                    department: "業務C組",
+                    performance: 390.0
+                }
+            ]
+
+
+            async function doingData() {
+                var objectStore = db.transaction(["persons"]).objectStore("persons");
+                var myMsg = document.getElementById("displayMessage");
+                await new Promise((resolve, reject) => {
+                    objectStore.openCursor().onsuccess = function (event) {
+                        var cursorResult = event.target.result;
+                        if (cursorResult) {
+                            tempData.push([cursorResult.value.name, cursorResult.value
+                                .performance
+                            ]);
+                            cursorResult.continue();
+                        } else
+                            resolve();
+                    };
+                })
+                drawCanvas1();
+                drawCanvas2();
+                drawCanvas3();
+                dataEdit();
+
+            }
+
+
+
+            $(function () {
+                $("#tabs").tabs();
+            });
+
+
+            function drawCanvas1() {
+                var canvas = document.getElementById("mycanvas1");
+                canvas.width = 1000;
+                canvas.height = 700;
+                if (canvas.getContext) {
+
+                    var ctx = canvas.getContext("2d");
+                    var ox = 50;
+                    var oy = 650;
+                    var cWidth = 850;
+                    var cHeight = 600;
+                    const count = 12;
+                    var gap = cWidth / (count + 2);
+
+                    /* 畫座標軸*/
+                    ctx.beginPath();
+                    ctx.moveTo(ox, oy - cHeight);
+                    ctx.lineTo(ox, oy);
+                    ctx.lineTo(ox + cWidth, oy);
+                    ctx.font = "12pt 微軟正黑體";
+                    for (var i = 100; i <= 500; i += 100) {
+                        ctx.fillText(`_${i}`, ox, oy - i);
+                    }
+                    ctx.strokeStyle = "#111";
+                    ctx.lineWidth = 5;
+                    ctx.stroke();
+
+                    /* 標註文字 */
+                    ctx.font = "20pt 微軟正黑體";
+                    ctx.fillText("營收(萬元)", ox + 10, oy - cHeight);
+                    ctx.fillText("月份", ox + cWidth + 10, oy);
+
+                    /*畫資料折線*/
+                    ctx.lineWidth = 3;
+
+                    for (var i = 0, temp = ox + 2 * gap; i < tempData.length; i++, temp += gap) {
+
+
+                        if (i == 0) continue;
+                        else {
+
+                            ctx.beginPath();
+
+
+                            if (parseInt(tempData[i][1]) > parseInt(tempData[i - 1][1])) ctx
+                                .strokeStyle = 'red';
+                            else if (parseInt(tempData[i][1]) < parseInt(tempData[i - 1][1])) ctx.strokeStyle =
+                                "green";
+                            else ctx.strokeStyle = "darkblue";
+                            // if (tempData[i][1] > tempData[i - 1][1]) ctx.strokeStyle = 'red';
+                            // else if (tempData[i][1] < tempData[i - 1][1]) ctx.strokeStyle = "green";
+                            // else ctx.strokeStyle = "darkblue";
+                            ctx.moveTo(temp - gap, oy - tempData[i - 1][1]);
+                            ctx.lineTo(temp, oy - tempData[i][1]);
+                            ctx.stroke();
+
+
+                        }
+
+
+
+
+
+                    }
+
+
+                    //標註文字
+                    ctx.font = "13pt 微軟正黑體";
+                    ctx.lineWidth = 2;
+                    for (var i = 0, temp = ox + 2 * gap; i < tempData.length; i++, temp += gap) {
+                        ctx.beginPath();
+                        ctx.moveTo(temp, oy);
+                        if (i % 3 == 2) {
+                            ctx.strokeStyle = 'rebeccapurple';
+                            ctx.setLineDash([3]);
+                            ctx.lineTo(temp, oy - tempData[i][1]);
+
+                        } else {
+                            ctx.strokeStyle = 'black';
+                            ctx.setLineDash([]);
+                            ctx.lineTo(temp, oy - 8);
+                        }
+
+                        ctx.stroke();
+
+                        ctx.fillStyle = 'rebeccapurple';
+                        ctx.fillText(`${tempData[i][1]}`, temp - 10, oy - tempData[i][1] - 10);
+                        if (i % 3 == 2) {
+                            ctx.fillStyle = 'rebeccapurple';
+                            ctx.fillText(`${tempData[i][0]}`, temp - 20, oy + 20);
+
+                        }
+
+                        ctx.beginPath();
+                        ctx.arc(temp, oy - tempData[i][1], 3, 0, 2.0 * Math.PI);
+                        ctx.strokeStyle = "rebeccapurple";
+                        ctx.fillStyle = "rebeccapurple";
+                        ctx.fill();
+                        ctx.stroke();
+
+
+                    }
+                }
+            }
+
+            function drawCanvas2() {
+                var canvas = document.getElementById("mycanvas2");
+                canvas.width = 1000;
+                canvas.height = 750;
+                if (canvas.getContext) {
+
+                    var ctx = canvas.getContext("2d");
+                    var ox = 50;
+                    var oy = 650;
+                    var cWidth = 850;
+                    var cHeight = 600;
+                    const count = 12;
+                    var gap = cWidth / (count + 2);
+
+
+
+                    ctx.beginPath();
+                    ctx.stroke();
+
+
+
+                    /* 標註文字 */
+                    ctx.font = "20pt 微軟正黑體";
+                    ctx.fillText("營收(萬元)", ox + 10, oy - cHeight);
+                    ctx.fillText("月份", ox + cWidth + 10, oy);
+
+
+
+                    //標註文字
+                    ctx.font = "13pt 微軟正黑體";
+                    ctx.lineWidth = 2;
+
+                    for (var i = 0, temp = ox + 2 * gap; i < tempData.length; i++, temp += gap) {
+                        /* 畫矩形 */
+                        ctx.beginPath();
+                        if (i == 0 || tempData[i][1] == tempData[i - 1][1]) ctx.fillStyle = "darkblue";
+                        else if (parseInt(tempData[i][1]) < parseInt(tempData[i - 1][1])) ctx.fillStyle = "green";
+                        else ctx.fillStyle = "red";
+                        ctx.fillRect(temp - 5, oy, 10, -tempData[i][1]);
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.strokeStyle = 'rebeccapurple';
+                        ctx.setLineDash([2]);
+                        ctx.fillStyle = 'rebeccapurple';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${tempData[i][1]}`, temp, oy - tempData[i][1] - 10);
+                        if (i % 2 == 0) {
+                            ctx.fillText(`${tempData[i][0]}`, temp, oy + 30);
+                            ctx.moveTo(temp, oy);
+                            ctx.lineTo(temp, oy + 10);
+                        } else {
+                            ctx.fillText(`${tempData[i][0]}`, temp, oy + 70);
+                            ctx.moveTo(temp, oy);
+                            ctx.lineTo(temp, oy + 50);
+                        }
+
+                        ctx.stroke();
+                    }
+
+                    /* 畫座標軸*/
+                    ctx.beginPath();
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = 'black';
+                    ctx.moveTo(ox, oy - cHeight);
+                    ctx.lineTo(ox, oy);
+                    ctx.lineTo(ox + cWidth, oy);
+                    ctx.font = "12pt 微軟正黑體";
+                    for (var i = 100; i <= 500; i += 100) {
+                        ctx.fillText(`_${i}`, ox, oy - i);
+                    }
+                    ctx.setLineDash([]);
+                    ctx.strokeStyle = "#111";
+                    ctx.lineWidth = 5;
+                    ctx.stroke();
+                }
+            }
+
+            function drawCanvas3() {
+                var canvas = document.getElementById("mycanvas3");
+                canvas.width = 1000;
+                canvas.height = 850;
+                if (canvas.getContext) {
+
+                    var ctx = canvas.getContext("2d");
+                    var ox = 50;
+                    var oy = 800;
+                    var cWidth = 900;
+                    var cHeight = 750;
+                    var circle_x = 550;
+                    var circle_y = 400;
+                    var circle_r = 270;
+                    const count = 12;
+                    var total = 0;
+                    tempData.forEach(element => {
+                        total += parseInt(element[1]);
+                    });
+
+
+
+                    var gap = (count / 3);
+                    var seasonTotal = 0;
+                    var seasonLast = 1.5 * Math.PI;
+                    var monthLast = 1.5 * Math.PI;
+                    var tempSita;
+                    var tempSita2;
+                    for (var i = 0; i < gap; i++) {
+                        seasonTotal = 0;
+                        for (var j = 0; j < 3; j++) {
+                            seasonTotal += parseInt(tempData[i * 3 + j][1]);
+
+                            /*月份填色*/
+                            ctx.beginPath();
+                            var r = 255 - Math.floor(Math.random() * 128);
+                            var g = 255 - Math.floor(Math.random() * 128);
+                            var b = 255 - Math.floor(Math.random() * 128);
+                            ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+                            ctx.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
+                            ctx.arc(circle_x, circle_y, circle_r, monthLast, monthLast + 2 * tempData[i * 3 + j][
+                                    1
+                                ] /
+                                total *
+                                Math.PI);
+                            ctx.lineTo(circle_x, circle_y);
+                            ctx.closePath();
+                            ctx.lineWidth = 1;
+                            ctx.fill();
+                            ctx.stroke();
+
+                            /*月份文字*/
+                            if (tempData[i * 3 + j][1] / total >= 1 / 18)
+                                ctx.font = "18pt 微軟正黑體";
+                            else if (tempData[i * 3 + j][1] / total >= 1 / 36)
+                                ctx.font = "10pt 微軟正黑體";
+                            else if (tempData[i * 3 + j][1] / total >= 1 / 72)
+                                ctx.font = "6pt 微軟正黑體";
+                            else
+                                ctx.font = "5pt 微軟正黑體";
+
+                            tempSita2 = tempData[i * 3 + j][1] / total * Math.PI;
+                            ctx.fillStyle = "black";
+                            ctx.textAlign = "center";
+                            textBaseline = "middle";
+                            ctx.fillText(`${i * 3 + j+1}月`, circle_x + Math.cos(monthLast + tempSita2) * 220,
+                                circle_y +
+                                Math
+                                .sin(
+                                    monthLast +
+                                    tempSita2) * 220);
+
+
+
+
+                            monthLast += 2 * tempData[i * 3 + j][1] / total * Math.PI;
+
+
+
+                        }
+
+
+                        /*第n季文字*/
+                        tempSita = seasonTotal / total * Math.PI;
+                        ctx.font = "20pt 微軟正黑體";
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "center";
+                        textBaseline = "middle";
+                        ctx.fillText(`第${i+1}季度`, circle_x + Math
+                            .cos(
+                                seasonLast +
+                                tempSita) * 350, circle_y + Math
+                            .sin(
+                                seasonLast +
+                                tempSita) * 350);
+
+                        ctx.font = "14pt 微軟正黑體";
+                        ctx.fillText(`合計約${(seasonTotal / total *100).toFixed(2)}%`, circle_x + Math.cos(
+                                seasonLast +
+                                tempSita) * 350, circle_y + 25 + Math
+                            .sin(
+                                seasonLast +
+                                tempSita) * 350);
+
+                        /*黑框填色*/
+                        ctx.beginPath();
+                        ctx.lineWidth = 7;
+                        ctx.strokeStyle = "#555";
+                        ctx.arc(circle_x,
+                            circle_y, circle_r, seasonLast, seasonLast + 2 * seasonTotal / total *
+                            Math.PI);
+                        ctx.lineTo(circle_x, circle_y);
+                        ctx.closePath();
+                        ctx.stroke();
+
+                        seasonLast += 2 * seasonTotal / total * Math.PI;
+
+                    }
+
+
+                    ctx.beginPath();
+                    ctx.stroke();
+
+                    /* 畫座標軸*/
+                    ctx.beginPath();
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = 'black';
+                    ctx.moveTo(ox, oy - cHeight);
+                    ctx.lineTo(ox, oy);
+                    ctx.lineTo(ox + cWidth, oy);
+                    ctx.font = "12pt 微軟正黑體";
+                    for (var i = 100; i <= 700; i += 100) {
+                        ctx.fillText(`_${i}`, ox, oy - i);
+                    }
+                    ctx.setLineDash([]);
+                    ctx.strokeStyle = "#111";
+                    ctx.lineWidth = 5;
+                    ctx.stroke();
+
+                    /*總營收方框*/
+                    ctx.beginPath();
+                    ctx.globalAlpha = 0.6;
+                    ctx.fillStyle = "#111";
+                    ctx.fillRect(circle_x - 130, circle_y - 30, 260, 50);
+                    ctx.strokeStyle = "#222";
+                    // ctx.lineWidth = 6;
+                    // ctx.strokeRect(circle_x - 130, circle_y - 30, 260, 50);
+
+                    /*總營收文字*/
+                    ctx.globalAlpha = 1;
+                    ctx.font = "22pt 微軟正黑體";
+                    ctx.fillStyle = "white";
+                    ctx.textAlign = "center";
+                    ctx.fillText(`總營收: ${total}萬元`, circle_x, circle_y + 5);
+                }
+
+
+
+            }
+
+
+            function dataEdit() {
+                var objectStore = db.transaction(["persons"]).objectStore("persons");
+                var myMsg = document.getElementById("displayMessage");
+
+                myMsg.innerHTML = "<h3>建議座標範圍:0~500+(萬元)<br></h3>";
+                objectStore.openCursor().onsuccess = function (event) {
+                    var cursorResult = event.target.result;
+
+                    if (cursorResult) {
+                        myMsg.innerHTML +=
+                            `Id: ${padding(cursorResult.key, 4)}, Data:<input type="number" min="0" max="1000" id="input${cursorResult.key}" value="${cursorResult.value
+                                .performance}">萬元<br>`;
+
+                        cursorResult.continue();
+                    } else {
+
+
+                    }
+
+
+                }
+
+            }
+
+
+
+            $('#btnSave').click(function () {
+                let tx = db.transaction(['persons'], 'readwrite');
+                var objectStore = tx.objectStore("persons");
+                for (let i = 1; i <= 12; i++) {
+                    if ($(`#input${i}`).val() < 0) {
+                        document.getElementById(`input${i}`).value = 0;
+                    }
+                    objectStore.put({
+                        id: i,
+                        name: tempData[i - 1][0],
+                        performance: $(`#input${i}`).val()
+                    });
+
+                }
+                window.location.reload();
+
+
+
+            });
+
+        };
+    </script>
+
+</head>
+
+<body>
+    <div id="tabs">
+        <ul>
+            <li><a href="#tabs-1">折線圖</a></li>
+            <li><a href="#tabs-2">長條圖</a></li>
+            <li><a href="#tabs-3">圓餅圖</a></li>
+            <li><a href="#tabs-4">查改資料</a></li>
+        </ul>
+        <div id="tabs-1">
+            <h1>Line chart</h1>
+            <aside>
+                <canvas class="mycanvas" id="mycanvas1"></canvas>
+            </aside>
+            <br>
+        </div>
+        <div id="tabs-2">
+            <h1>Bar Chart</h1>
+            <aside>
+                <canvas class="mycanvas" id="mycanvas2"></canvas>
+            </aside>
+            <br>
+        </div>
+        <div id="tabs-3">
+            <h1>Pie Chart</h1>
+            <aside>
+                <canvas class="mycanvas" id="mycanvas3"></canvas>
+            </aside>
+            <br>
+        </div>
+        <div id="tabs-4">
+            <h1>查改資料</h1>
+            <div id="parentX">
+                <p id="displayMessage"></p>
+                <br><button id='btnSave'>儲存並重整頁面</button><br>
+
+            </div>
+
+
+        </div>
+    </div>
+
+</body>
+
+</html>

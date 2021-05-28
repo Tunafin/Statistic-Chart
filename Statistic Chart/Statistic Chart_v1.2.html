@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Demo</title>
+
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+    <style>
+        #tabs {
+            width: 1280px;
+            height: 960px;
+            margin: auto;
+
+        }
+
+        #tabs {
+            text-align: center;
+        }
+
+
+
+        #displayMessage {
+            margin: 3px auto;
+            padding: 10px;
+            width: 600px;
+            height: 600px;
+            background-color: darkseagreen;
+            text-align: left;
+            font-size: 18px;
+        }
+
+        .mycanvas {
+            background-color: rgb(195, 240, 195);
+            box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+            -webkit-box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+            -moz-box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+            -o-box-shadow: inset 0px 0px 50px 0px #ABABAB, 5px 5px 5px 1px #242424;
+        }
+
+        #mycanvas1 {
+            margin: auto;
+        }
+    </style>
+    <!-- indexedDB -->
+    <script>
+        if (!indexedDB) {
+            alert("抱歉, 您的瀏覽器不支援Indexed DB");
+        } else {
+            alert("支援Indexed DB");
+        }
+
+        function padding(num, length) { //輸出時佔幾位數
+            return (Array(length).join("0") + num).slice(-length);
+        }
+
+        const personsData = [ //單位: 萬元
+            {
+                name: "January",
+                department: "業務A組",
+                performance: 300
+            },
+            {
+                name: "February",
+                department: "業務A組",
+                performance: 240.0
+            },
+            {
+                name: "March",
+                department: "業務A組",
+                performance: 400.0
+            },
+            {
+                name: "April",
+                department: "業務A組",
+                performance: 350.0
+            },
+            {
+                name: "May",
+                department: "業務B組",
+                performance: 160.0
+            },
+            {
+                name: "June",
+                department: "業務B組",
+                performance: 250.0
+            },
+            {
+                name: "July",
+                department: "業務B組",
+                performance: 370.0
+            },
+            {
+                name: "August",
+                department: "業務B組",
+                performance: 320.0
+            },
+            {
+                name: "September",
+                department: "業務C組",
+                performance: 200.0
+            },
+            {
+                name: "October",
+                department: "業務C組",
+                performance: 240.0
+            },
+            {
+                name: "November",
+                department: "業務C組",
+                performance: 470.0
+            },
+            {
+                name: "December",
+                department: "業務C組",
+                performance: 330.0
+            }
+        ]
+
+        var db;
+        var dbname = "myIndexedDB12";
+        var request = indexedDB.open(dbname, 1);
+
+        request.onerror = function (event) {
+            alert("發生錯誤");
+        }
+        request.onsuccess = function (event) {
+            db = request.result;
+            //alert("資料庫開啟成功:" + db);
+        }
+        request.onupgradeneeded = function (event) {
+            var db = event.target.result;
+            var objectStore = db.createObjectStore("persons", {
+                key: "id",
+                autoIncrement: true
+            });
+
+            for (var i in personsData) {
+                objectStore.add(personsData[i]);
+            }
+        }
+
+        function readAllData() {
+
+            var objectStore = db.transaction(["persons"]).objectStore("persons");
+            var myMsg = document.getElementById("displayMessage");
+            myMsg.innerHTML = "";
+            objectStore.openCursor().onsuccess = function (event) {
+
+                var cursorResult = event.target.result;
+
+                if (cursorResult) {
+                    myMsg.innerHTML += "Id: " + padding(cursorResult.key, 4) + ", name: " + cursorResult.value
+                        .name + ", department: " +
+                        cursorResult.value.department + ", performance: " + cursorResult.value.performance +
+                        "萬元<br>";
+                    cursorResult.continue();
+                } else {
+                    myMsg.innerHTML += "資料讀完了<br>";
+                }
+
+            };
+        }
+
+        var tempData = [];
+        async function doingData() {
+
+
+
+            var objectStore = db.transaction(["persons"]).objectStore("persons");
+            var myMsg = document.getElementById("displayMessage");
+            await new Promise((resolve, reject) => {
+                objectStore.openCursor().onsuccess = function (event) {
+                    var cursorResult = event.target.result;
+                    if (cursorResult) {
+                        tempData.push([cursorResult.value.name, cursorResult.value.performance]);
+                        cursorResult.continue();
+                    } else
+                        resolve();
+                };
+            })
+            showTempData();
+            drawCanvas1();
+            drawCanvas2();
+            drawCanvas3();
+            $("#btre").hide();
+            alert("載入中請稍後!");
+        }
+
+        function showTempData() {
+            tempData.forEach(item => {
+                console.log(item[1]);
+            });
+            console.log(tempData[1][1]);
+        }
+
+        $(function () {
+            $("#tabs").tabs();
+        });
+
+
+        function drawCanvas1() {
+            var canvas = document.getElementById("mycanvas1");
+            canvas.width = 1000;
+            canvas.height = 700;
+            if (canvas.getContext) {
+
+                var ctx = canvas.getContext("2d");
+                var ox = 50;
+                var oy = 650;
+                var cWidth = 850;
+                var cHeight = 600;
+                const count = 12;
+                var gap = cWidth / (count + 2);
+
+                /* 畫座標軸*/
+                ctx.beginPath();
+                ctx.moveTo(ox, oy - cHeight);
+                ctx.lineTo(ox, oy);
+                ctx.lineTo(ox + cWidth, oy);
+                ctx.font = "12pt 微軟正黑體";
+                for (var i = 100; i <= 500; i += 100) {
+                    ctx.fillText(`_${i}`, ox, oy - i);
+                }
+                ctx.strokeStyle = "#111";
+                ctx.lineWidth = 5;
+                ctx.stroke();
+
+                /* 標註文字 */
+                ctx.font = "20pt 微軟正黑體";
+                ctx.fillText("營收(萬元)", ox + 10, oy - cHeight);
+                ctx.fillText("月份", ox + cWidth + 10, oy);
+
+                /*畫資料折線*/
+                ctx.lineWidth = 3;
+                for (var i = 0, temp = ox + 2 * gap; i < tempData.length; i++, temp += gap) {
+                    ctx.beginPath();
+
+                    if (i == 0) continue;
+                    else {
+                        if (tempData[i][1] > tempData[i - 1][1]) ctx.strokeStyle = 'red';
+                        else ctx.strokeStyle = 'green';
+                        ctx.moveTo(temp - gap, oy - tempData[i - 1][1]);
+                        ctx.lineTo(temp, oy - tempData[i][1]);
+                    }
+                    ctx.stroke();
+
+                }
+
+
+                //標註文字
+                ctx.font = "13pt 微軟正黑體";
+                ctx.lineWidth = 2;
+                for (var i = 0, temp = ox + 2 * gap; i < tempData.length; i++, temp += gap) {
+                    ctx.beginPath();
+                    ctx.moveTo(temp, oy);
+                    if (i % 3 == 2) {
+                        ctx.strokeStyle = 'rebeccapurple';
+                        ctx.setLineDash([3]);
+                        ctx.lineTo(temp, oy - tempData[i][1]);
+
+                    } else {
+                        ctx.strokeStyle = 'black';
+                        ctx.setLineDash([]);
+                        ctx.lineTo(temp, oy - 8);
+                    }
+
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'rebeccapurple';
+                    ctx.fillText(`${tempData[i][1]}`, temp - 10, oy - tempData[i][1] - 10);
+                    if (i % 3 == 2) {
+                        ctx.fillStyle = 'rebeccapurple';
+                        ctx.fillText(`${tempData[i][0]}`, temp - 20, oy + 20);
+
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(temp, oy - tempData[i][1], 3, 0, 2.0 * Math.PI);
+                    ctx.strokeStyle = "rebeccapurple";
+                    ctx.fillStyle = "rebeccapurple";
+                    ctx.fill();
+                    ctx.stroke();
+
+
+                }
+            }
+        }
+
+        function drawCanvas2() {
+            var canvas = document.getElementById("mycanvas2");
+            canvas.width = 1000;
+            canvas.height = 800;
+            if (canvas.getContext) {
+
+                var ctx = canvas.getContext("2d");
+                var ox = 50;
+                var oy = 650;
+                var cWidth = 850;
+                var cHeight = 600;
+                const count = 12;
+                var gap = cWidth / (count + 2);
+
+
+
+                ctx.beginPath();
+                ctx.stroke();
+
+
+
+                /* 標註文字 */
+                ctx.font = "20pt 微軟正黑體";
+                ctx.fillText("營收(萬元)", ox + 10, oy - cHeight);
+                ctx.fillText("月份", ox + cWidth + 10, oy);
+
+
+
+                //標註文字
+                ctx.font = "13pt 微軟正黑體";
+                ctx.lineWidth = 2;
+
+                for (var i = 0, temp = ox + 2 * gap; i < tempData.length; i++, temp += gap) {
+                    /* 畫矩形 */
+                    ctx.beginPath();
+                    if (i == 0 || tempData[i][1] > tempData[i - 1][1]) {
+                        ctx.fillStyle = "red";
+                    } else {
+                        ctx.fillStyle = "green";
+                    }
+                    ctx.fillRect(temp - 5, oy, 10, -tempData[i][1]);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'rebeccapurple';
+                    ctx.setLineDash([2]);
+                    ctx.fillStyle = 'rebeccapurple';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${tempData[i][1]}`, temp, oy - tempData[i][1] - 10);
+                    if (i % 2 == 0) {
+                        ctx.fillText(`${tempData[i][0]}`, temp, oy + 30);
+                        ctx.moveTo(temp, oy);
+                        ctx.lineTo(temp, oy + 10);
+                    } else {
+                        ctx.fillText(`${tempData[i][0]}`, temp, oy + 70);
+                        ctx.moveTo(temp, oy);
+                        ctx.lineTo(temp, oy + 50);
+                    }
+
+                    ctx.stroke();
+                }
+
+                /* 畫座標軸*/
+                ctx.beginPath();
+                ctx.textAlign = 'left';
+                ctx.fillStyle = 'black';
+                ctx.moveTo(ox, oy - cHeight);
+                ctx.lineTo(ox, oy);
+                ctx.lineTo(ox + cWidth, oy);
+                ctx.font = "12pt 微軟正黑體";
+                for (var i = 100; i <= 500; i += 100) {
+                    ctx.fillText(`_${i}`, ox, oy - i);
+                }
+                ctx.setLineDash([]);
+                ctx.strokeStyle = "#111";
+                ctx.lineWidth = 5;
+                ctx.stroke();
+            }
+        }
+
+        function drawCanvas3() {
+            var canvas = document.getElementById("mycanvas3");
+            canvas.width = 1000;
+            canvas.height = 700;
+            if (canvas.getContext) {
+
+                var ctx = canvas.getContext("2d");
+                var ox = 50;
+                var oy = 650;
+                var cWidth = 850;
+                var cHeight = 600;
+                var circle_x = 480;
+                var circle_y = 320;
+                var circle_r = 270;
+                var circle2_x = 600;
+                var circle2_y = 400;
+                const count = 12;
+                var total = 0;
+                tempData.forEach(element => {
+                    total += element[1];
+                });
+                var gap = (count / 3);
+                var seasonTotal = 0;
+                //var monthTotal = 0; 這行不需要
+                var seasonLast = 1.5 * Math.PI;
+                var monthLast = 1.5 * Math.PI;
+                var tempSita;
+                var tempSita2;
+                for (var i = 0; i < gap; i++) {
+                    seasonTotal = 0;
+
+
+
+                    for (var j = 0; j < 3; j++) {
+                        seasonTotal += tempData[i * 3 + j][1];
+
+                        ctx.beginPath();
+                        var r = 255 - Math.floor(Math.random() * 128);
+                        var g = 255 - Math.floor(Math.random() * 128);
+                        var b = 255 - Math.floor(Math.random() * 128);
+                        ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+                        ctx.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
+                        ctx.arc(circle_x, circle_y, circle_r, monthLast, monthLast + 2 * tempData[i * 3 + j][1] /
+                            total *
+                            Math.PI);
+                        ctx.lineTo(circle_x, circle_y);
+                        ctx.closePath();
+                        ctx.lineWidth = 1;
+                        ctx.fill();
+                        ctx.stroke();
+
+                        /*月份文字*/
+                        tempSita2 = tempData[i * 3 + j][1] / total * Math.PI;
+                        ctx.font = "12pt 微軟正黑體";
+                        ctx.fillStyle = "black";
+                        ctx.textAlign = "center";
+                        textBaseline = "middle";
+                        ctx.fillText(`${i * 3 + j+1}月`, circle_x + Math.cos(monthLast + tempSita2) * 200, circle_y +
+                            Math
+                            .sin(
+                                monthLast +
+                                tempSita2) * 200);
+
+
+                        monthLast += 2 * tempData[i * 3 + j][1] / total * Math.PI;
+
+
+
+                    }
+
+                    /**/
+                    tempSita = seasonTotal / total * Math.PI;
+                    ctx.font = "24pt 微軟正黑體";
+                    ctx.fillStyle = "black";
+                    ctx.textAlign = "center";
+                    textBaseline = "middle";
+                    ctx.fillText(`第${i+1}季度`, circle_x + Math.cos(seasonLast + tempSita) * 350, circle_y + Math.sin(
+                        seasonLast +
+                        tempSita) * 350);
+
+
+                    console.log(seasonLast / (2 * Math.PI));
+
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = "black";
+                    ctx.arc(circle_x, circle_y, circle_r, seasonLast, seasonLast + 2 * tempSita);
+                    ctx.lineTo(circle_x, circle_y);
+                    ctx.closePath();
+                    ctx.lineWidth = 7;
+                    //ctx.fill();
+                    ctx.stroke();
+
+                    // ctx.beginPath();
+                    // ctx.strokeStyle = "gray";
+                    // ctx.lineWidth = 5;
+                    // ctx.moveTo(circle_x, circle_y);
+                    // ctx.lineTo(circle_x + Math.cos(seasonLast + tempSita) * 300, circle_y + Math.sin(seasonLast +
+                    //     tempSita) * 300);
+                    // ctx.stroke();
+
+
+
+                    seasonLast += 2 * seasonTotal / total * Math.PI;
+
+
+                }
+
+
+                ctx.beginPath();
+                ctx.stroke();
+
+
+
+
+
+                /* 畫座標軸*/
+                ctx.beginPath();
+                ctx.textAlign = 'left';
+                ctx.fillStyle = 'black';
+                ctx.moveTo(ox, oy - cHeight);
+                ctx.lineTo(ox, oy);
+                ctx.lineTo(ox + cWidth, oy);
+                ctx.font = "12pt 微軟正黑體";
+                for (var i = 100; i <= 500; i += 100) {
+                    ctx.fillText(`_${i}`, ox, oy - i);
+                }
+                ctx.setLineDash([]);
+                ctx.strokeStyle = "#111";
+                ctx.lineWidth = 5;
+                ctx.stroke();
+            }
+
+        }
+
+        function restart() {
+            $("#btre").hide();
+            doingData();
+        }
+    </script>
+
+</head>
+
+<body onload="doingData()">
+
+
+    <div id="tabs">
+        <ul>
+            <li><a href="#tabs-1">Nunc tincidunt</a></li>
+            <li><a href="#tabs-2">Proin dolor</a></li>
+            <li><a href="#tabs-3">Aenean lacinia</a></li>
+            <li><a href="#tabs-4">查看資料</a></li>
+        </ul>
+        <div id="tabs-1">
+            <h1>折線圖</h1>
+            <aside>
+                <canvas class="mycanvas" id="mycanvas1"></canvas>
+            </aside>
+            <br>
+            <button onclick="restart()" id="btre">若載入未成功 請重新載入</button>
+
+
+        </div>
+        <div id="tabs-2">
+            <h1>長條圖</h1>
+            <aside>
+                <canvas class="mycanvas" id="mycanvas2"></canvas>
+            </aside>
+            <br>
+        </div>
+        <div id="tabs-3">
+            <h1>圓餅圖</h1>
+            <aside>
+                <canvas class="mycanvas" id="mycanvas3"></canvas>
+            </aside>
+            <br>
+        </div>
+        <div id="tabs-4">
+            <button onclick="readAllData()">讀取全部資料</button>
+            <div id="parentX">
+                <p id="displayMessage"></p>
+            </div>
+
+
+        </div>
+    </div>
+
+</body>
+
+</html>
